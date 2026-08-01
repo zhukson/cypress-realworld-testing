@@ -1,0 +1,30 @@
+name: Migration validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths: [package.json, yarn.lock, scripts/updateAlgoliaIndex.ts]
+
+permissions:
+  contents: read
+
+jobs:
+  algolia-v5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: yarn
+      - name: Install dependencies
+        env:
+          CYPRESS_INSTALL_BINARY: "0"
+        run: npx -y yarn@1.22.22 install --frozen-lockfile --ignore-scripts
+      - name: Typecheck repository
+        run: npx -y yarn@1.22.22 types
+      - name: Reject Algolia v4 APIs
+        run: |
+          ! grep -Eq 'initIndex[[:space:]]*\(' scripts/updateAlgoliaIndex.ts
+          ! grep -Eq 'import[[:space:]]+algoliasearch[[:space:]]+from' scripts/updateAlgoliaIndex.ts
